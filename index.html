@@ -1,0 +1,126 @@
+<!DOCTYPE  lang="zh-cn">
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>简单聊天室</title>
+	<script src="https://cdn.jsdelivr.net/npm/vue"></script>
+	<link rel="stylesheet" href="/css/element-ui@2.9.1.css">
+	<script src="/js/element-ui@2.9.1.js"></script>
+	<style type="text/css">
+		::-webkit-scrollbar-track-piece {
+		background-color:#f8f8f8;
+		}
+		::-webkit-scrollbar {
+		width:9px;
+		height:9px;
+		}
+		::-webkit-scrollbar-thumb {
+		background-color:#dddddd;
+		background-clip:padding-box;
+		min-height:28px;
+		}
+		::-webkit-scrollbar-thumb:hover {
+		background-color:#bbb;
+		}
+	</style>
+</head>
+<body>
+	<div id="app">
+		<div v-if="is_show">
+			<el-row style="margin-top: 15px;">
+				<el-col :span="10" :offset="1">
+					<el-col :span="24" >
+					  	<el-card class="box-card" style="height: 500px;overflow-y:scroll;">
+						  <div id="content"></div>
+						</el-card>
+					  </el-col>
+					  <el-col :span="24" style="margin-top:15px;">
+					  	<el-row>
+						  <el-col :span="20">
+						  	<el-input  placeholder="请输入内容" v-model="userMessage"></el-input>
+						  </el-col>
+						  <el-col :span="4" style="text-align: center;">
+						  	<el-button type="primary" @click="send">发送</el-button>
+						  </el-col>
+						</el-row>
+					  </el-col>
+				</el-col>
+				<el-col :span="4" style="margin-left: 20px;">
+					<el-card class="box-card" style="height: 550px;overflow-y:scroll;">
+						  <ul >
+						    <li v-for="(item,index) in userList" :key="index">{{item }}</li>
+						  </ul>
+					</el-card>
+				</el-col>
+			</el-row>
+			
+		</div>
+	</div>
+<script type="text/javascript">
+	new Vue({
+		el:'#app',
+		data:{
+			username:'',
+			is_show:false,
+			userMessage:'',
+			websocket:{},
+			userList:{}
+		},
+		methods: {
+			wsServer:function(){
+				var param = '?username='+this.username;
+            	var wsServer = 'ws://192.168.30.23:9502'+param;
+				this.websocket = new WebSocket(wsServer);
+				this.websocket.onopen = (evt)=>{
+					//console.log('连接成功')
+				}
+				this.websocket.onclose = function (evt) {
+				    console.log("server:close");
+				};
+				this.websocket.onmessage = (evt)=>{
+					var res = JSON.parse(evt.data);
+					if(res.type==='message'){
+						var newdiv=document.createElement("div");
+						var newtext=document.createTextNode('['+res.time+']'+res.data);
+						newdiv.appendChild(newtext);
+						document.getElementById("content").appendChild(newdiv)
+					}else if(res.type==='list'){
+						this.userList = res.data;
+					}
+				};
+				this.websocket.onerror = function (evt, e) {
+					alert('服务器已关闭')
+				};
+            },
+            usernames:function(){
+            	this.$prompt('你的昵称', '', {
+		          confirmButtonText: '确定',
+		          showCancelButton:false,
+		          showClose:false,
+		          closeOnClickModal:false,
+		          cancelButtonText: '',
+		          inputPattern: /\S/,
+		          inputErrorMessage: '不能为空格'
+		        }).then(({ value }) => {
+		          this.username = value;
+		          this.is_show = true;
+		          this.wsServer();
+		        });
+            },
+            send:function(){
+            	if(!this.userMessage){
+            		return false;
+            	}
+				this.websocket.send(this.userMessage);
+				this.userMessage = '';
+            }
+        },
+		created:function(){
+			this.usernames();
+		}
+
+	})
+</script>
+</body>
+
+</html>
